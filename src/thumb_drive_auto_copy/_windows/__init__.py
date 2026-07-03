@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import re
 import shutil
 import subprocess
 import threading
@@ -12,6 +14,8 @@ import PyQt6.QtWidgets
 
 from thumb_drive_auto_copy._config import AppConfig
 import thumb_drive_auto_copy._drive_utils
+
+_SAFE_HIGHLIGHT_PATH = re.compile(r"^[A-Za-z]:\\[A-Za-z0-9 .\\\-]+$")
 
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
     status_message = PyQt6.QtCore.pyqtSignal(str)
@@ -116,8 +120,11 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             if not file.exists():
                 print(f"File does not exist, skipping highlight: {file}")
                 continue
-            print(f"Highlighting file: {file}")
-            cmd_command = f'start explorer.exe /select,{str(file.resolve())}'
+            resolved_file = os.path.realpath(str(file.resolve()))
+            if not _SAFE_HIGHLIGHT_PATH.fullmatch(resolved_file):
+                raise ValueError(f"Unsafe characters in highlight path: {resolved_file}")
+            print(f"Highlighting file: {resolved_file}")
+            cmd_command = f'start explorer.exe /select,{resolved_file}'
             cmd = [
                         "cmd.exe",
                         "/c",

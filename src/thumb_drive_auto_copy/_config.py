@@ -51,7 +51,7 @@ def load_config() -> AppConfig:
         _logger.debug(f"Config in {_config_path} must be a mapping; using defaults.")
         return default
 
-    source_pattern = loaded.get("source_pattern", default.source_pattern)
+    source_pattern = loaded.get("source_pattern", default.source_pattern).replace("**", "*") # recursive glob intentionally not supported
     destination_value = loaded.get("destination_path", str(default.destination_path))
     move_files_value = loaded.get("move_files", default.move_files)
 
