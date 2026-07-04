@@ -6,24 +6,28 @@ import re
 import shutil
 import subprocess
 import threading
-from pathlib import Path
 import time
+from pathlib import Path
 
 import PyQt6.QtCore
 import PyQt6.QtWidgets
 
-from thumb_drive_auto_copy._config import AppConfig
 import thumb_drive_auto_copy._drive_utils
+from thumb_drive_auto_copy._config import AppConfig
 
 _SAFE_HIGHLIGHT_PATH = re.compile(r"^[A-Za-z]:\\[A-Za-z0-9 .\\\-]+$")
 
+
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
+    """Main application window for thumb_drive_auto_copy."""
+
     status_message = PyQt6.QtCore.pyqtSignal(str)
     eject_prompt = PyQt6.QtCore.pyqtSignal(str, int, str)
     show_window = PyQt6.QtCore.pyqtSignal()
     quit_app = PyQt6.QtCore.pyqtSignal()
 
     def __init__(self, loop: asyncio.AbstractEventLoop, config: AppConfig):
+        """Initialize the main window and set up the UI components."""
         super().__init__()
         self.loop = loop
         self.config = config
@@ -124,12 +128,12 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             if not _SAFE_HIGHLIGHT_PATH.fullmatch(resolved_file):
                 raise ValueError(f"Unsafe characters in highlight path: {resolved_file}")
             print(f"Highlighting file: {resolved_file}")
-            cmd_command = f'start explorer.exe /select,{resolved_file}'
+            cmd_command = f"start explorer.exe /select,{resolved_file}"
             cmd = [
-                        "cmd.exe",
-                        "/c",
-                        cmd_command,
-                    ]
+                "cmd.exe",
+                "/c",
+                cmd_command,
+            ]
             print(cmd)
             if files:
                 subprocess.run(
@@ -183,7 +187,9 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             self._emit_status(f"Scanning drive: {drive}")
             matched_files = matched_files_by_drive.get(drive)
             if not matched_files:
-                self._emit_status(f"No files matched on {drive} for pattern {config.source_pattern}")
+                self._emit_status(
+                    f"No files matched on {drive} for pattern {config.source_pattern}"
+                )
                 continue
 
             drive_name = drive.replace(":\\", "")
@@ -202,7 +208,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
 
                     shutil.copy2(source_file, destination_file)
                     moved_files.append(destination_file)
-                    
+
                     if config.move_files:
                         try:
                             source_file.unlink()
@@ -249,8 +255,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             )
         else:
             self._emit_status(
-                "Done. "
-                f"Copied {copied_count} file(s), skipped {skipped_count} existing file(s)."
+                "Done. " f"Copied {copied_count} file(s), skipped {skipped_count} existing file(s)."
             )
 
         self._request_quit("Operation completed.")

@@ -1,27 +1,32 @@
-from dataclasses import dataclass
 import datetime
 import logging
-import os
 import pathlib
+from dataclasses import dataclass
 
-import yaml
 import decouple
+import yaml
 
 _logger = logging.getLogger(__name__)
 
 _config = decouple.AutoConfig(search_path=pathlib.Path.cwd())
 
+
 @dataclass(frozen=True)
 class AppConfig:
+    """Data class to hold application configuration."""
+
     source_pattern: str
     destination_path: pathlib.Path
     move_files: bool
 
 
 def _get_config_path() -> pathlib.Path:
-    config_path = _config("TDAC_DESTINATION", default="~/.config/thumb_drive_auto_copy/settings.yaml", cast=pathlib.Path)
+    config_path = _config(
+        "TDAC_DESTINATION",
+        default="~/.config/thumb_drive_auto_copy/settings.yaml",
+        cast=pathlib.Path,
+    )
     return pathlib.Path(config_path).expanduser()
-
 
 
 def load_config() -> AppConfig:
@@ -51,12 +56,19 @@ def load_config() -> AppConfig:
         _logger.debug(f"Config in {_config_path} must be a mapping; using defaults.")
         return default
 
-    source_pattern = loaded.get("source_pattern", default.source_pattern).replace("**", "*") # recursive glob intentionally not supported
+    source_pattern = loaded.get("source_pattern", default.source_pattern).replace(
+        "**", "*"
+    )  # recursive glob intentionally not supported
     destination_value = loaded.get("destination_path", str(default.destination_path))
     move_files_value = loaded.get("move_files", default.move_files)
 
     source_pattern = str(source_pattern).strip() or default.source_pattern
-    destination_path = pathlib.Path(str(destination_value)).expanduser().resolve().replace("{TIMESTAMP}", datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    destination_path = (
+        pathlib.Path(str(destination_value))
+        .expanduser()
+        .resolve()
+        .replace("{TIMESTAMP}", datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    )
     if isinstance(move_files_value, bool):
         move_files = move_files_value
     else:
