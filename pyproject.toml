@@ -21,6 +21,8 @@ pyyaml = "^6.0.3"
 filelock = "^3.29.4"
 python-decouple = "^3.8"
 
+[tool.poetry.group.installer.dependencies]
+pyinstaller = {version = "^6.21.0", python="^3.11,<3.16"}
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -29,3 +31,10 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.group.dev.dependencies]
 ni-python-styleguide = "^0.5.0"
 pytest = "^9.1.1"
+poethepoet = "^0.47.1"
+
+[tool.poe.tasks]
+format = "ni-python-styleguide format"
+lint = "ni-python-styleguide lint"
+build = "pyinstaller --clean --noconfirm --onefile --noconsole --name thumb-drive-auto-copy src/thumb_drive_auto_copy/__main__.py"
+all = ["format", "lint", "build"]
