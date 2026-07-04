@@ -65,5 +65,5 @@ def template_and_configure_task(install_path: str):
 if __name__ == "__main__":
     enable_driver_framework_logging()
     template_and_configure_task(
-        install_path="C:\\Program Files\\ThumbDriveAutoCopy\\drive_auto_copy.exe"
+        install_path="C:\\Program Files\\ThumbDriveAutoCopy\\drive-auto-copy.exe"
     )
