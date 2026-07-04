@@ -34,7 +34,7 @@ def load_config() -> AppConfig:
     default = AppConfig(
         source_pattern="AHQU/USBREC/*.WAV",
         destination_path=pathlib.Path.home() / "Documents" / "ThumbDriveBackups",
-        move_files=False,
+        move_files=True,
     )
 
     _config_path = _get_config_path()
