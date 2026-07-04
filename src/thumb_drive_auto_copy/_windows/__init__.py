@@ -192,8 +192,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 )
                 continue
 
-            drive_name = drive.replace(":\\", "")
-            drive_destination = destination_root / drive_name
+            drive_destination = destination_root
             drive_destination.mkdir(parents=True, exist_ok=True)
             drive_transferred_count = 0
             moved_files = []
