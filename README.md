@@ -1,6 +1,6 @@
-# thumb-drive-auto-copy
+# drive-auto-copy
 
-A utility to move files (configurable paths and patterns) to the system when ever a thumb drive is plugged in.
+A utility to move files (configurable paths and patterns) to the system when ever a removable drive is plugged in.
 
 
 ## Why?
@@ -15,13 +15,13 @@ After files are moved, the app prompts to optionally eject the drive.
 
 If present, configuration is loaded from:
 
-`~/.config/thumb_drive_auto_copy/config.yaml`
+`~/.config/drive_auto_copy/config.yaml`
 
 Example:
 
 ```yaml
 source_pattern: "AHQUE/USBREC/*.WAV"
-destination_path: "~/Music/ThumbDriveAutoCopy"
+destination_path: "~/Music/DriveAutoCopy"
 move_files: true
 ```
 

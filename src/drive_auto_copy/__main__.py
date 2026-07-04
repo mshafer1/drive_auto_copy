@@ -1,4 +1,4 @@
-"""thumb_drive_auto_copy: Main entry point for the application."""
+"""drive_auto_copy: Main entry point for the application."""
 
 import asyncio
 import contextlib
@@ -12,15 +12,15 @@ import PyQt6.QtCore
 import PyQt6.QtWidgets
 import qasync
 
-import thumb_drive_auto_copy._windows as windows
-from thumb_drive_auto_copy import _config
+import drive_auto_copy._windows as windows
+from drive_auto_copy import _config
 
 
 @contextlib.contextmanager
 def _mutex_lock():
     try:
         with filelock.FileLock(
-            os.path.join(tempfile.gettempdir(), "thumb_drive_auto_copy.lock"), timeout=0.5
+            os.path.join(tempfile.gettempdir(), "drive_auto_copy.lock"), timeout=0.5
         ):
             yield
     except filelock.Timeout:
@@ -34,7 +34,7 @@ def _mutex_lock():
 
 @click.command()
 def main():
-    """Main entry point for the thumb_drive_auto_copy application."""
+    """Main entry point for the drive_auto_copy application."""
     with _mutex_lock():
         click.echo("Thumb Drive Auto Copy Application is running...")
 

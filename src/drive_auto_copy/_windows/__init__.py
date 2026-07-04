@@ -12,14 +12,14 @@ from pathlib import Path
 import PyQt6.QtCore
 import PyQt6.QtWidgets
 
-import thumb_drive_auto_copy._drive_utils
-from thumb_drive_auto_copy._config import AppConfig
+import drive_auto_copy._drive_utils
+from drive_auto_copy._config import AppConfig
 
 _SAFE_HIGHLIGHT_PATH = re.compile(r"^[A-Za-z]:\\[A-Za-z0-9 .\\\-]+$")
 
 
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
-    """Main application window for thumb_drive_auto_copy."""
+    """Main application window for drive_auto_copy."""
 
     status_message = PyQt6.QtCore.pyqtSignal(str)
     eject_prompt = PyQt6.QtCore.pyqtSignal(str, int, str)
@@ -145,7 +145,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         config = self.config
         self._emit_status("Starting thumb drive scan...")
 
-        drives = thumb_drive_auto_copy._drive_utils.get_removable_drives()
+        drives = drive_auto_copy._drive_utils.get_removable_drives()
         if not drives:
             print("No removable drives found. Exiting.")
             self._request_quit("No removable drives found.")

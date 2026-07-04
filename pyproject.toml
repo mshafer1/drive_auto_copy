@@ -1,5 +1,5 @@
 [project]
-name = "thumb-drive-auto-copy"
+name = "drive-auto-copy"
 version = "0.1.0"
 description = "Auto copy files from removable media"
 authors = [
@@ -9,9 +9,9 @@ license = "MIT"
 requires-python = ">=3.11,<4"
 dynamic = ["dependencies"]
 packages = [
-    {include = "thumb_drive_auto_copy", from = "src"}
+    {include = "drive_auto_copy", from = "src"}
 ]
-scripts = {thumb-drive-auto-copy = "thumb_drive_auto_copy.__main__:main"}
+scripts = {drive-auto-copy = "drive_auto_copy.__main__:main"}
 
 [tool.poetry.dependencies]
 click = "^8.4.2"
@@ -36,5 +36,8 @@ poethepoet = "^0.47.1"
 [tool.poe.tasks]
 format = "ni-python-styleguide format"
 lint = "ni-python-styleguide lint"
-build = "pyinstaller --clean --noconfirm --onefile --noconsole --name thumb-drive-auto-copy src/thumb_drive_auto_copy/__main__.py"
-all = ["format", "lint", "build"]
+build-exe = "pyinstaller --clean --noconfirm --onefile --noconsole --name drive-auto-copy src/drive_auto_copy/__main__.py"
+build-first-launch = "pyinstaller --clean --noconfirm --onefile --console --name drive-auto-copy-first-launch src/first_install/__init__.py"
+build-installer = "wix build installer/Package.wxs -arch x64 -out dist/DriveAutoCopy.msi"
+# build-installer not included in 'all'
+all = ["format", "lint", "build-exe", "build-first-launch"]
