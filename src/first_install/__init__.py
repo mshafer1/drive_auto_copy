@@ -4,6 +4,7 @@ import base64
 import ctypes
 import os
 import subprocess
+import sys
 
 _SCHEDULED_TASK_TEMPLATE = """<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -25,8 +26,8 @@ _SCHEDULED_TASK_TEMPLATE = """<?xml version="1.0" encoding="UTF-16"?>
   </Principals>
   <Settings>
     <MultipleInstancesPolicy>StopExisting</MultipleInstancesPolicy>
-    <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>true</StopIfGoingOnBatteries>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
     <AllowHardTerminate>true</AllowHardTerminate>
     <StartWhenAvailable>false</StartWhenAvailable>
     <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
@@ -53,22 +54,26 @@ _SCHEDULED_TASK_TEMPLATE = """<?xml version="1.0" encoding="UTF-16"?>
 
 
 # check if running elevated
-def _fail_if_not_elevated():
-    """Fail if the script is not running with elevated privileges."""
+def _is_elevated():
+    """Check if the script is running with elevated privileges."""
     try:
         # Check if the user is an admin on Windows
-        if ctypes.windll.shell32.IsUserAnAdmin() == 0:
-            raise RuntimeError("This script must be run with elevated privileges.")
+        # Returns 1 if elevated (Admin), 0 if not
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0
     except AttributeError:
         # Fallback for Linux/macOS: Check if running as root (UID 0)
         try:
-            if os.getlogin() != "root":
-                raise RuntimeError("This script must be run with elevated privileges.")
+            return os.getlogin() == "root"
         except Exception:
             # If os.geteuid() is not available, we can't determine if we're elevated
             raise RuntimeError(
                 "Cannot determine if the script is running with elevated privileges."
             )
+
+
+def _fail_if_not_elevated():
+    if not _is_elevated():
+        raise RuntimeError("This script must be run with elevated privileges.")
 
 
 # enable Windows DriverFramework operational event logging
@@ -94,7 +99,7 @@ def template_and_configure_task(install_path: str):
     _fail_if_not_elevated()
     ps_command = f"""
     $xml = $env:SchedTaskTemplate
-    Register-ScheduledTask -TaskName 'Drive Auto Copy' -Xml $xml -User 'NT AUTHORITY\\SYSTEM' -Force
+    Register-ScheduledTask -TaskName 'Drive Auto Copy' -Xml $xml -Force
     """
     encoded_command = base64.b64encode(ps_command.encode("utf-16-le")).decode("utf-8")
     try:
@@ -117,8 +122,24 @@ def template_and_configure_task(install_path: str):
         raise RuntimeError(f"Failed to create scheduled task: {e}") from e
 
 
+def _run_as_admin():
+    if not _is_elevated():
+        # Re-run the script with admin arguments
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", sys.executable, " ".join(sys.argv), None, 1
+        )
+        sys.exit(0)
+
+
 if __name__ == "__main__":
-    enable_driver_framework_logging()
-    template_and_configure_task(
-        install_path="C:\\Program Files\\Drive Auto Copy\\drive-auto-copy.exe"
-    )
+    _run_as_admin()
+    print("Running first-time setup...")
+    try:
+        enable_driver_framework_logging()
+        template_and_configure_task(
+            install_path="C:\\Program Files\\Drive Auto Copy\\drive-auto-copy.exe"
+        )
+        print("First-time setup completed successfully.")
+    except RuntimeError as e:
+        print(f"Error during first-time setup: {e}")
+    input("Press Enter to exit...")
