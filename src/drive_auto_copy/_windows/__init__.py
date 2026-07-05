@@ -87,7 +87,8 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
 
         self._show_event.clear()
         self.show_window.emit()
-        self._show_event.wait()
+        if not self._show_event.wait(timeout=5):
+            self._request_quit("Warning: Main window did not become visible within 5 seconds.")
 
     def _request_quit(self, why: str | None = None):
         print("Requesting application quit...")
