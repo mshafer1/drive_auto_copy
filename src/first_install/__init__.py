@@ -130,6 +130,10 @@ def _run_as_admin():
             None, "runas", sys.executable, subprocess.list2cmdline(sys.argv), None, 1
         )
         if result <= 32:
+            # Common case: user cancelled the UAC prompt.
+            if result == 5:  # SE_ERR_ACCESSDENIED
+                print("Elevation was cancelled; first-time setup was not completed.")
+                raise RuntimeError("Elevation was cancelled; first-time setup was not completed.")
             raise RuntimeError(f"Failed to relaunch as admin (ShellExecuteW returned {result}).")
         sys.exit(0)
 
