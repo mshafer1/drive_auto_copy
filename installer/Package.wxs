@@ -2,7 +2,7 @@
   <Package
     Name="Drive Auto Copy"
     Manufacturer="Drive Auto Copy"
-    Version="0.0.1"
+    Version="0.1.0"
     UpgradeCode="{5B4529B6-23D0-4616-8BD5-E7CB7AB402B4}"
     Language="1033"
     Scope="perMachine">

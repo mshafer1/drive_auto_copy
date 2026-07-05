@@ -6,7 +6,7 @@ import os
 import subprocess
 import sys
 
-_SCHEDULED_TASK_TEMPLATE = """<?xml version="1.0" encoding="UTF-16"?>
+_SCHEDULED_TASK_TEMPLATE = r"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
     <Date>2026-06-29T20:54:05.4092301</Date>
@@ -47,7 +47,7 @@ _SCHEDULED_TASK_TEMPLATE = """<?xml version="1.0" encoding="UTF-16"?>
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>C:\Program Files\Drive Auto Copy\drive-auto-copy.exe</Command>
+      <Command><SCRIPT_PATH></Command>
     </Exec>
   </Actions>
 </Task>"""
@@ -115,7 +115,12 @@ def template_and_configure_task(install_path: str):
             check=True,
             capture_output=True,
             text=True,
-            env={**os.environ, "SchedTaskTemplate": _SCHEDULED_TASK_TEMPLATE},
+            env={
+                **os.environ,
+                "SchedTaskTemplate": _SCHEDULED_TASK_TEMPLATE.replace(
+                    "<SCRIPT_PATH>", install_path
+                ),
+            },
         )
     except subprocess.CalledProcessError as e:
         print(f"Error registering task: {e.stderr}")

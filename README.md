@@ -1,6 +1,6 @@
 # drive-auto-copy
 
-A utility to move files (configurable paths and patterns) to the system when ever a removable drive is plugged in.
+A utility to move files (configurable paths and patterns) to the system whenever a removable drive is plugged in.
 
 
 ## Why?

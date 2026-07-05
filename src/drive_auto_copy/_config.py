@@ -23,7 +23,7 @@ class AppConfig:
 def _get_config_path() -> pathlib.Path:
     config_path = _config(
         "TDAC_DESTINATION",
-        default="~/.config/drive_auto_copy/settings.yaml",
+        default="~/.config/drive_auto_copy/config.yaml",
         cast=pathlib.Path,
     )
     return pathlib.Path(config_path).expanduser()
@@ -33,7 +33,7 @@ def load_config() -> AppConfig:
     """Load the application configuration from a YAML file."""
     default = AppConfig(
         source_pattern="AHQU/USBREC/*.WAV",
-        destination_path=str(pathlib.Path.home() / "Documents" / "ThumbDriveBackups"),
+        destination_path=pathlib.Path.home() / "Documents" / "ThumbDriveBackups",
         move_files=True,
     )
 
@@ -43,7 +43,10 @@ def load_config() -> AppConfig:
         _config_path.parent.mkdir(parents=True, exist_ok=True)
         with _config_path.open("w", encoding="utf-8") as fout:
             yaml.safe_dump(
-                dataclasses.asdict(default),  # Convert dataclass to dict for YAML serialization
+                {
+                    **dataclasses.asdict(default),
+                    "destination_path": str(default.destination_path),
+                },
                 fout,
             )
         return default

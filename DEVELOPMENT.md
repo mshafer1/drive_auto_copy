@@ -31,8 +31,8 @@ poetry install --with installer
 Build both EXEs into the `dist/` folder:
 
 ```powershell
-poetry run poe build_exe
-poetry run poe build_first_launch
+poetry run poe build-exe
+poetry run poe build-first-launch
 ```
 
 Expected outputs:

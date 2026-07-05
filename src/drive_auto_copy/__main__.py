@@ -29,7 +29,7 @@ def _mutex_lock():
 
     except Exception as e:
         print(f"An unexpected error occurred while acquiring the lock: {e}")
-        sys.exit(0)
+        sys.exit(1)
 
 
 @click.command()
