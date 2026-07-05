@@ -150,7 +150,18 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         co_uninitialize.argtypes = []
         co_uninitialize.restype = None
 
-        co_initialize(None)
+        hr = co_initialize(None)
+        if hr < 0:
+            print(f"CoInitialize failed (HRESULT={hr}); falling back to explorer /select.")
+            for file in files:
+                time.sleep(0.15)
+                if not file.exists() or not file.is_file():
+                    print(f"File does not exist, skipping highlight: {file}")
+                    continue
+                resolved_file = str(file.resolve())
+                subprocess.run(["explorer.exe", f'/select,"{resolved_file}"'], check=False)
+            return
+
         try:
             for file in files:
                 time.sleep(0.15)
