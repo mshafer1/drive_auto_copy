@@ -16,8 +16,8 @@
       FileRef="fileFirstLaunchExe"
       ExeCommand=""
       Return="ignore"
-      Impersonate="no" />
-      <!-- user impersonation is set to "no" to ensure the action runs with elevated privileges -->
+      Impersonate="yes" />
+      <!-- Impersonate is set to "yes" (which runs non-elevated as the user) because the script requests elevation -->
 
     <InstallExecuteSequence>
       <Custom

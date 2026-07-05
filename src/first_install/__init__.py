@@ -130,9 +130,7 @@ def _run_as_admin():
             None, "runas", sys.executable, subprocess.list2cmdline(sys.argv), None, 1
         )
         if result <= 32:
-            raise RuntimeError(
-                f"Failed to relaunch as admin (ShellExecuteW returned {result})."
-            )
+            raise RuntimeError(f"Failed to relaunch as admin (ShellExecuteW returned {result}).")
         sys.exit(0)
 
 
