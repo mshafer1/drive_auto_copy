@@ -5,7 +5,12 @@ import string
 
 @functools.lru_cache(maxsize=1)
 def get_removable_drives():
-    """Return a list of drive letters for all connected removable drives."""
+    """Return a list of drive letters for all connected removable drives.
+
+    NOTE: This function is cached to ensure consistent results during the program's execution
+    The program is expected to run once per drive insertion, so caching is appropriate to avoid
+    inconsistencies if drives are removed during execution.
+    """
     removable_drives = []
 
     # Get a bitmask of all connected drive letters (e.g., 29 means A, C, D, E)
