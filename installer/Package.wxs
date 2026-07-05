@@ -15,7 +15,7 @@
       Id="LaunchFirstRun"
       FileRef="fileFirstLaunchExe"
       ExeCommand=""
-      Return="ignore"
+      Return="check"
       Impersonate="yes" />
       <!-- Impersonate is set to "yes" (which runs non-elevated as the user) because the script requests elevation -->
 
