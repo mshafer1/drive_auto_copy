@@ -65,13 +65,19 @@ def load_config() -> AppConfig:
         _logger.debug(f"Config in {_config_path} must be a mapping; using defaults.")
         return default
 
-    source_pattern = loaded.get("source_pattern", default.source_pattern).replace(
-        "**", "*"
-    )  # recursive glob intentionally not supported
+    source_pattern_value = loaded.get("source_pattern", default.source_pattern)
     destination_value = loaded.get("destination_path", str(default.destination_path))
     move_files_value = loaded.get("move_files", default.move_files)
 
-    source_pattern = str(source_pattern).strip() or default.source_pattern
+    if isinstance(source_pattern_value, str):
+        source_pattern = (
+            source_pattern_value.replace("**", "*").strip() or default.source_pattern
+        )  # recursive glob intentionally not supported
+    else:
+        _logger.debug(
+            f"Invalid source_pattern value in {_config_path}: {source_pattern_value!r}; using default."
+        )
+        source_pattern = default.source_pattern
     destination_path = (
         pathlib.Path(
             str(destination_value).replace(
@@ -85,7 +91,13 @@ def load_config() -> AppConfig:
     if isinstance(move_files_value, bool):
         move_files = move_files_value
     else:
-        move_files = decouple.strtobool(str(move_files_value))
+        try:
+            move_files = decouple.strtobool(str(move_files_value))
+        except ValueError:
+            _logger.debug(
+                f"Invalid move_files value in {_config_path}: {move_files_value!r}; using default."
+            )
+            move_files = default.move_files
 
     _logger.debug(f"Loaded config from {_config_path}")
     return AppConfig(

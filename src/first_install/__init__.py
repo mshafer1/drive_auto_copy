@@ -5,6 +5,7 @@ import ctypes
 import os
 import subprocess
 import sys
+import xml.sax.saxutils
 
 _SCHEDULED_TASK_TEMPLATE = r"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -60,15 +61,10 @@ def _is_elevated():
         # Check if the user is an admin on Windows
         # Returns 1 if elevated (Admin), 0 if not
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
-    except AttributeError:
-        # Fallback for Linux/macOS: Check if running as root (UID 0)
-        try:
-            return os.getlogin() == "root"
-        except Exception:
-            # If os.geteuid() is not available, we can't determine if we're elevated
-            raise RuntimeError(
-                "Cannot determine if the script is running with elevated privileges."
-            )
+    except (AttributeError, OSError):
+        if hasattr(os, "geteuid"):
+            return os.geteuid() == 0
+        raise RuntimeError("Cannot determine if the script is running with elevated privileges.")
 
 
 def _fail_if_not_elevated():
@@ -118,7 +114,7 @@ def template_and_configure_task(install_path: str):
             env={
                 **os.environ,
                 "SchedTaskTemplate": _SCHEDULED_TASK_TEMPLATE.replace(
-                    "<SCRIPT_PATH>", install_path
+                    "<SCRIPT_PATH>", xml.sax.saxutils.escape(install_path)
                 ),
             },
         )

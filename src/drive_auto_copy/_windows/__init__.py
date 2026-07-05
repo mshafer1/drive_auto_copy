@@ -251,6 +251,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                             self._emit_status(f"Moved: {source_file.name}")
                         except OSError as error:
                             copied_not_removed_count += 1
+                            drive_transferred_count += 1
                             self._emit_status(
                                 f"Copied but could not remove source {source_file.name}: {error}"
                             )
@@ -267,7 +268,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 self._emit_status(f"No files transferred from drive: {drive}")
 
         for drive, (drive_transferred_count, moved_files) in transferred_by_drive.items():
-            action_word = "moved" if config.move_files else "copied"
+            action_word = "transferred"
             should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
             self._highlight_files(moved_files)
             if should_eject:
