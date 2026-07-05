@@ -99,7 +99,7 @@ def template_and_configure_task(install_path: str):
     """
     encoded_command = base64.b64encode(ps_command.encode("utf-16-le")).decode("utf-8")
     try:
-        # Create a new scheduled task using schtasks
+        # Create a new scheduled task using powershell
         subprocess.run(
             [
                 "powershell.exe",
