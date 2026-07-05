@@ -15,7 +15,7 @@ After files are moved, the app prompts to optionally eject the drive.
 
 If present, configuration is loaded from:
 
-`~/.config/drive_auto_copy/config.yaml`
+`~/.config/drive_auto_copy/settings.yaml`
 
 Example:
 
