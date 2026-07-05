@@ -20,7 +20,7 @@ If present, configuration is loaded from:
 Example:
 
 ```yaml
-source_pattern: "AHQUE/USBREC/*.WAV"
+source_pattern: "AHQU/USBREC/*.WAV"
 destination_path: "~/Music/DriveAutoCopy"
 move_files: true
 ```

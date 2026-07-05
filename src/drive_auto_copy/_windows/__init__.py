@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import os
-import re
+import ctypes
 import shutil
 import subprocess
 import threading
 import time
+from ctypes import wintypes
 from pathlib import Path
 
 import PyQt6.QtCore
@@ -15,7 +15,7 @@ import PyQt6.QtWidgets
 import drive_auto_copy._drive_utils
 from drive_auto_copy._config import AppConfig
 
-_SAFE_HIGHLIGHT_PATH = re.compile(r"^[A-Za-z]:\\[A-Za-z0-9 .\\\-]+$")
+HRESULT = getattr(wintypes, "HRESULT", ctypes.c_long)
 
 
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
@@ -118,28 +118,62 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
 
     @staticmethod
     def _highlight_files(files: list[Path]):
-        # Highlight the copied files in File Explorer
+        # Use Shell API selection first because explorer /select is inconsistent in reused windows.
         print(f"Highlighting copied files in File Explorer...: {files}")
-        for file in files:
-            if not file.exists():
-                print(f"File does not exist, skipping highlight: {file}")
-                continue
-            resolved_file = os.path.realpath(str(file.resolve()))
-            if not _SAFE_HIGHLIGHT_PATH.fullmatch(resolved_file):
-                raise ValueError(f"Unsafe characters in highlight path: {resolved_file}")
-            print(f"Highlighting file: {resolved_file}")
-            cmd_command = f"start explorer.exe /select,{resolved_file}"
-            cmd = [
-                "cmd.exe",
-                "/c",
-                cmd_command,
-            ]
-            print(cmd)
-            if files:
-                subprocess.run(
-                    cmd,
-                    check=False,
-                )
+
+        shell32 = ctypes.WinDLL("shell32", use_last_error=True)
+        ole32 = ctypes.OleDLL("ole32")
+
+        ILCreateFromPathW = shell32.ILCreateFromPathW
+        ILCreateFromPathW.argtypes = [wintypes.LPCWSTR]
+        ILCreateFromPathW.restype = ctypes.c_void_p
+
+        ILFree = shell32.ILFree
+        ILFree.argtypes = [ctypes.c_void_p]
+        ILFree.restype = None
+
+        SHOpenFolderAndSelectItems = shell32.SHOpenFolderAndSelectItems
+        SHOpenFolderAndSelectItems.argtypes = [
+            ctypes.c_void_p,
+            wintypes.UINT,
+            ctypes.POINTER(ctypes.c_void_p),
+            wintypes.DWORD,
+        ]
+        SHOpenFolderAndSelectItems.restype = HRESULT
+
+        CoInitialize = ole32.CoInitialize
+        CoInitialize.argtypes = [ctypes.c_void_p]
+        CoInitialize.restype = HRESULT
+
+        CoUninitialize = ole32.CoUninitialize
+        CoUninitialize.argtypes = []
+        CoUninitialize.restype = None
+
+        CoInitialize(None)
+        try:
+            for file in files:
+                time.sleep(0.15)
+                if not file.exists() or not file.is_file():
+                    print(f"File does not exist, skipping highlight: {file}")
+                    continue
+
+                resolved_file = str(file.resolve())
+                print(f"Highlighting file: {resolved_file}")
+
+                pidl = ILCreateFromPathW(resolved_file)
+                if not pidl:
+                    # Fallback for paths the shell could not parse into a PIDL.
+                    subprocess.run(["explorer.exe", f'/select,"{resolved_file}"'], check=False)
+                    continue
+
+                try:
+                    hr = SHOpenFolderAndSelectItems(pidl, 0, None, 0)
+                    if hr != 0:
+                        subprocess.run(["explorer.exe", f'/select,"{resolved_file}"'], check=False)
+                finally:
+                    ILFree(pidl)
+        finally:
+            CoUninitialize()
 
     def _run_copy_workflow(self):
         config = self.config
@@ -176,6 +210,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         copied_count = 0
         skipped_count = 0
         copied_not_removed_count = 0
+        transferred_by_drive: dict[str, tuple[int, list[Path]]] = {}
         destination_root = config.destination_path
         destination_root.mkdir(parents=True, exist_ok=True)
 
@@ -227,24 +262,23 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                     self._emit_status(f"Error copying {source_file.name}: {error}")
 
             if drive_transferred_count > 0:
-                action_word = "moved" if config.move_files else "copied"
-                should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
-                self._highlight_files(moved_files)
-                if should_eject:
-                    if self._eject_drive(drive):
-                        print(f"Ejected drive: {drive}")
-                    else:
-                        print(f"Failed to eject drive: {drive}")
-                        self._emit_status(f"Failed to eject drive: {drive}")
-                        self._emit_status(f"Please manually eject the drive: {drive}")
-                        return
-                else:
-                    self._emit_status(f"Drive not ejected: {drive}")
-                    return
+                transferred_by_drive[drive] = (drive_transferred_count, moved_files)
             else:
                 self._emit_status(f"No files transferred from drive: {drive}")
-                time.sleep(2)  # Allow user to read the message before quitting
-                self._request_quit(f"No files to transfer from drive: {drive}")
+
+        for drive, (drive_transferred_count, moved_files) in transferred_by_drive.items():
+            action_word = "moved" if config.move_files else "copied"
+            should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
+            self._highlight_files(moved_files)
+            if should_eject:
+                if self._eject_drive(drive):
+                    self._emit_status(f"Drive ejected successfully: {drive}")
+                else:
+                    print(f"Failed to eject drive: {drive}")
+                    self._emit_status(f"Failed to eject drive: {drive}")
+                    self._emit_status(f"Please manually eject the drive: {drive}")
+            else:
+                self._emit_status(f"Drive not ejected: {drive}")
 
         if config.move_files:
             self._emit_status(
