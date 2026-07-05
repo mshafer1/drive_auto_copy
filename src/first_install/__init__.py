@@ -131,7 +131,7 @@ def _run_as_admin():
     if not _is_elevated():
         # Re-run the script with admin arguments
         ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", sys.executable, " ".join(sys.argv), None, 1
+            None, "runas", sys.executable, subprocess.list2cmdline(sys.argv), None, 1
         )
         sys.exit(0)
 
