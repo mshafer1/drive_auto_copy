@@ -124,32 +124,32 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         shell32 = ctypes.WinDLL("shell32", use_last_error=True)
         ole32 = ctypes.OleDLL("ole32")
 
-        ILCreateFromPathW = shell32.ILCreateFromPathW
-        ILCreateFromPathW.argtypes = [wintypes.LPCWSTR]
-        ILCreateFromPathW.restype = ctypes.c_void_p
+        il_create_from_path_w = shell32.ILCreateFromPathW
+        il_create_from_path_w.argtypes = [wintypes.LPCWSTR]
+        il_create_from_path_w.restype = ctypes.c_void_p
 
-        ILFree = shell32.ILFree
-        ILFree.argtypes = [ctypes.c_void_p]
-        ILFree.restype = None
+        il_free = shell32.ILFree
+        il_free.argtypes = [ctypes.c_void_p]
+        il_free.restype = None
 
-        SHOpenFolderAndSelectItems = shell32.SHOpenFolderAndSelectItems
-        SHOpenFolderAndSelectItems.argtypes = [
+        sh_open_folder_and_select_items = shell32.SHOpenFolderAndSelectItems
+        sh_open_folder_and_select_items.argtypes = [
             ctypes.c_void_p,
             wintypes.UINT,
             ctypes.POINTER(ctypes.c_void_p),
             wintypes.DWORD,
         ]
-        SHOpenFolderAndSelectItems.restype = HRESULT
+        sh_open_folder_and_select_items.restype = HRESULT
 
-        CoInitialize = ole32.CoInitialize
-        CoInitialize.argtypes = [ctypes.c_void_p]
-        CoInitialize.restype = HRESULT
+        co_initialize = ole32.CoInitialize
+        co_initialize.argtypes = [ctypes.c_void_p]
+        co_initialize.restype = HRESULT
 
-        CoUninitialize = ole32.CoUninitialize
-        CoUninitialize.argtypes = []
-        CoUninitialize.restype = None
+        co_uninitialize = ole32.CoUninitialize
+        co_uninitialize.argtypes = []
+        co_uninitialize.restype = None
 
-        CoInitialize(None)
+        co_initialize(None)
         try:
             for file in files:
                 time.sleep(0.15)
@@ -160,20 +160,20 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 resolved_file = str(file.resolve())
                 print(f"Highlighting file: {resolved_file}")
 
-                pidl = ILCreateFromPathW(resolved_file)
+                pidl = il_create_from_path_w(resolved_file)
                 if not pidl:
                     # Fallback for paths the shell could not parse into a PIDL.
                     subprocess.run(["explorer.exe", f'/select,"{resolved_file}"'], check=False)
                     continue
 
                 try:
-                    hr = SHOpenFolderAndSelectItems(pidl, 0, None, 0)
+                    hr = sh_open_folder_and_select_items(pidl, 0, None, 0)
                     if hr != 0:
                         subprocess.run(["explorer.exe", f'/select,"{resolved_file}"'], check=False)
                 finally:
-                    ILFree(pidl)
+                    il_free(pidl)
         finally:
-            CoUninitialize()
+            co_uninitialize()
 
     def _run_copy_workflow(self):
         config = self.config
