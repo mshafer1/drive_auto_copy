@@ -11,7 +11,7 @@ _SCHEDULED_TASK_TEMPLATE = r"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
     <Date>2026-06-29T20:54:05.4092301</Date>
-    <URI>\Run Drive Copy</URI>
+    <URI>\Drive Auto Copy</URI>
   </RegistrationInfo>
   <Triggers>
     <EventTrigger>
@@ -126,9 +126,13 @@ def template_and_configure_task(install_path: str):
 def _run_as_admin():
     if not _is_elevated():
         # Re-run the script with admin arguments
-        ctypes.windll.shell32.ShellExecuteW(
+        result = ctypes.windll.shell32.ShellExecuteW(
             None, "runas", sys.executable, subprocess.list2cmdline(sys.argv), None, 1
         )
+        if result <= 32:
+            raise RuntimeError(
+                f"Failed to relaunch as admin (ShellExecuteW returned {result})."
+            )
         sys.exit(0)
 
 
@@ -143,4 +147,5 @@ if __name__ == "__main__":
         print("First-time setup completed successfully.")
     except RuntimeError as e:
         print(f"Error during first-time setup: {e}")
-    input("Press Enter to exit...")
+    if sys.stdin is not None and sys.stdin.isatty():
+        input("Press Enter to exit...")
