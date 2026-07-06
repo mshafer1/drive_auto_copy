@@ -13,12 +13,12 @@ def test___missing_config_file___returns_defaults_and_writes_template(tmp_path, 
     config = config_module.load_config()
 
     assert config.source_pattern == "AHQU/USBREC/*.WAV"
-    assert config.destination_path == Path.home() / "Documents" / "ThumbDriveBackups"
+    assert config.destination_path == Path.home() / "Documents" / "DriveBackups"
     assert config.move_files is True
     assert config_path.exists()
     written = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     assert written["source_pattern"] == "AHQU/USBREC/*.WAV"
-    assert written["destination_path"] == str(Path.home() / "Documents" / "ThumbDriveBackups")
+    assert written["destination_path"] == str(Path.home() / "Documents" / "DriveBackups")
     assert written["move_files"] is True
 
 
@@ -30,7 +30,7 @@ def test___invalid_yaml___returns_defaults(tmp_path, monkeypatch):
     config = config_module.load_config()
 
     assert config.source_pattern == "AHQU/USBREC/*.WAV"
-    assert config.destination_path == Path.home() / "Documents" / "ThumbDriveBackups"
+    assert config.destination_path == Path.home() / "Documents" / "DriveBackups"
     assert config.move_files is True
 
 
@@ -42,7 +42,7 @@ def test___non_mapping_yaml___returns_defaults(tmp_path, monkeypatch):
     config = config_module.load_config()
 
     assert config.source_pattern == "AHQU/USBREC/*.WAV"
-    assert config.destination_path == Path.home() / "Documents" / "ThumbDriveBackups"
+    assert config.destination_path == Path.home() / "Documents" / "DriveBackups"
     assert config.move_files is True
 
 

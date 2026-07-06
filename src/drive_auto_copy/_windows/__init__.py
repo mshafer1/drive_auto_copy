@@ -56,7 +56,8 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         if app is not None:
             app.aboutToQuit.connect(self._on_about_to_quit)
 
-        # self.worker_thread.start()
+        # starting the worker thread is done by the caller
+        # to help the window initialize before it starts
 
     def _emit_status(self, message: str):
         self.status_message.emit(message)
@@ -332,7 +333,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             )
         else:
             self._emit_status(
-                "Done. " f"Copied {copied_count} file(s), skipped {skipped_count} existing file(s)."
+                f"Done. Copied {copied_count} file(s), skipped {skipped_count} existing file(s)."
             )
 
         self._request_quit("Operation completed.")

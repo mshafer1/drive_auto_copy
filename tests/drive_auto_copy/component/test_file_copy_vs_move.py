@@ -18,7 +18,7 @@ def _build_window(qapp, event_loop, config):
 
 
 def test___copy_mode_enabled___copies_files_without_removing_source(
-    tmp_path, monkeypatch, qapp, event_loop, app_config_factory, fake__get_removable_drives
+    tmp_path, qapp, event_loop, app_config_factory, fake__get_removable_drives
 ):
     drive_root = tmp_path / "drive"
     drive_root.mkdir()

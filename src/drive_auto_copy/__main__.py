@@ -7,7 +7,7 @@ import sys
 import tempfile
 
 if sys.platform != "win32":
-    raise SystemExit("drive-auto-copy is currently supported on Windows only.")
+    raise SystemExit("drive-auto-copy is currently supported only on Windows.")
 
 import click
 import filelock
