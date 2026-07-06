@@ -78,15 +78,20 @@ def load_config() -> AppConfig:
             f"Invalid source_pattern value in {_config_path}: {source_pattern_value!r}; using default."
         )
         source_pattern = default.source_pattern
-    destination_path = (
-        pathlib.Path(
-            str(destination_value).replace(
-                "{TIMESTAMP}", datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            )
+
+    working_path = pathlib.Path(
+        str(destination_value).replace(
+            "{TIMESTAMP}", datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         )
-        .expanduser()
-        .resolve()
-    )
+    ).expanduser()
+    if not working_path.is_absolute():
+        _logger.warning(
+            "destination_path in config is not absolute; treating as relative to home directory."
+        )
+        working_path = pathlib.Path.home() / working_path
+        working_path.resolve()
+
+    destination_path = working_path
 
     if isinstance(move_files_value, bool):
         move_files = move_files_value
