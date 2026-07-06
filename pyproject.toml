@@ -13,6 +13,12 @@ packages = [
 ]
 scripts = {drive-auto-copy = "drive_auto_copy.__main__:main"}
 
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
 [tool.poetry.dependencies]
 click = "^8.4.2"
 pyqt6 = "^6.11.0"
@@ -24,11 +30,6 @@ python-decouple = "^3.8"
 [tool.poetry.group.installer.dependencies]
 pyinstaller = {version = "^6.21.0", python="^3.11,<3.16"}
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-
 [tool.poetry.group.test.dependencies]
 pytest = "^9.1.1"
 pytest-mock = "^3.15.1"
@@ -37,6 +38,10 @@ pytest-cov = "^7.1.0"
 [tool.poetry.group.dev.dependencies]
 ni-python-styleguide = "^0.5.0"
 poethepoet = "^0.47.1"
+
+[tool.poetry.group.security.dependencies]
+bandit = "^1.9.4"
+pip-audit = "^2.10.1"
 
 [tool.poe.tasks]
 format = "ni-python-styleguide format"
