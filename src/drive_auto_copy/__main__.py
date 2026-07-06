@@ -6,6 +6,9 @@ import os
 import sys
 import tempfile
 
+if sys.platform != "win32":
+    raise SystemExit("drive-auto-copy is currently supported on Windows only.")
+
 import click
 import filelock
 import PyQt6.QtCore
