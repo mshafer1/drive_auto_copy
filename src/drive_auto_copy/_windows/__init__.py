@@ -48,8 +48,13 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
 
         self._prompt_event = threading.Event()
         self._prompt_answer = False
+        self._shutdown_requested = threading.Event()
         self._show_event = threading.Event()
         self._window_shown = False
+
+        app = PyQt6.QtWidgets.QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._on_about_to_quit)
 
         # self.worker_thread.start()
 
@@ -75,11 +80,25 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
     @PyQt6.QtCore.pyqtSlot()
     def _on_quit_app(self):
         print("Quitting application...")
+        self._shutdown_requested.set()
+        self._prompt_event.set()
         app = PyQt6.QtWidgets.QApplication.instance()
         if app is not None:
             app.quit()
         self.loop.stop()
         print("Application quit successfully.")
+
+    @PyQt6.QtCore.pyqtSlot()
+    def _on_about_to_quit(self):
+        """Handle the aboutToQuit signal from the QApplication."""
+        self._shutdown_requested.set()
+        self._prompt_event.set()
+
+    def closeEvent(self, event):  # noqa: N802 - name from base class
+        """Handle the close event for the main window."""
+        self._shutdown_requested.set()
+        self._prompt_event.set()
+        super().closeEvent(event)
 
     def _ensure_window_visible(self):
         if self._window_shown:
@@ -111,10 +130,20 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self._prompt_event.set()
 
     def _ask_to_eject_drive(self, drive: str, transferred_count: int, action_word: str) -> bool:
+        if self._shutdown_requested.is_set():
+            return False
+
         self._prompt_answer = False
         self._prompt_event.clear()
-        self.eject_prompt.emit(drive, transferred_count, action_word)
-        self._prompt_event.wait()
+        try:
+            self.eject_prompt.emit(drive, transferred_count, action_word)
+        except RuntimeError:
+            return False
+
+        while not self._prompt_event.wait(timeout=0.25):
+            if self._shutdown_requested.is_set():
+                return False
+
         return self._prompt_answer
 
     @staticmethod
