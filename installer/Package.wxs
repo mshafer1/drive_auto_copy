@@ -1,0 +1,46 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Drive Auto Copy"
+    Manufacturer="Drive Auto Copy"
+    Version="0.1.0"
+    UpgradeCode="{5B4529B6-23D0-4616-8BD5-E7CB7AB402B4}"
+    Language="1033"
+    Scope="perMachine">
+    <!-- UpgradeCode must be a stable GUID for upgrades -->
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <CustomAction
+      Id="LaunchFirstRun"
+      FileRef="fileFirstLaunchExe"
+      ExeCommand=""
+      Return="check"
+      Impersonate="yes" />
+      <!-- Impersonate is set to "yes" (which runs non-elevated as the user) because the script requests elevation -->
+
+    <InstallExecuteSequence>
+      <Custom
+        Action="LaunchFirstRun"
+        After="InstallFinalize"
+        Condition="NOT Installed AND NOT REMOVE AND NOT WIX_UPGRADE_DETECTED" />
+    </InstallExecuteSequence>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Drive Auto Copy">
+        <Component Id="cmpMainExe" Guid="*">
+          <File Id="fileMainExe" Source="dist\drive-auto-copy.exe" KeyPath="yes" />
+        </Component>
+
+        <Component Id="cmpFirstLaunchExe" Guid="*">
+          <File Id="fileFirstLaunchExe" Source="dist\drive-auto-copy-first-launch.exe" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="Drive Auto Copy" Level="1">
+      <ComponentRef Id="cmpMainExe" />
+      <ComponentRef Id="cmpFirstLaunchExe" />
+    </Feature>
+  </Package>
+</Wix>

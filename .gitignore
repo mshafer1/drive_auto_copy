@@ -1,3 +1,8 @@
 .venv/
 .vscode/
 __pycache__/
+
+# installer / exe build side effects and artifacts
+build/
+dist/
+*.spec

@@ -1,0 +1,54 @@
+[project]
+name = "drive-auto-copy"
+version = "0.1.0"
+description = "Auto copy files from removable media"
+authors = [
+    {name = "Maker By Night",email = "2565361+mshafer1@users.noreply.github.com"}
+]
+license = "MIT"
+requires-python = ">=3.11,<4"
+dynamic = ["dependencies"]
+packages = [
+    {include = "drive_auto_copy", from = "src"}
+]
+scripts = {drive-auto-copy = "drive_auto_copy.__main__:main"}
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.dependencies]
+click = "^8.4.2"
+pyqt6 = "^6.11.0"
+qasync = "^0.28.0"
+pyyaml = "^6.0.3"
+filelock = "^3.29.4"
+python-decouple = "^3.8"
+
+[tool.poetry.group.installer.dependencies]
+pyinstaller = {version = "^6.21.0", python="^3.11,<3.16"}
+
+[tool.poetry.group.test.dependencies]
+pytest = "^9.1.1"
+pytest-mock = "^3.15.1"
+pytest-cov = "^7.1.0"
+
+[tool.poetry.group.dev.dependencies]
+ni-python-styleguide = "^0.5.0"
+poethepoet = "^0.47.1"
+
+[tool.poetry.group.security.dependencies]
+bandit = "^1.9.4"
+pip-audit = "^2.10.1"
+
+[tool.poe.tasks]
+format = "ni-python-styleguide format"
+lint = "ni-python-styleguide lint"
+test = "pytest --cov=drive_auto_copy --cov-report=term-missing --cov-report=xml --cov-report=html"
+build-exe = "pyinstaller --clean --noconfirm --onefile --noconsole --name drive-auto-copy src/drive_auto_copy/__main__.py"
+build-first-launch = "pyinstaller --clean --noconfirm --onefile --console --name drive-auto-copy-first-launch src/first_install/__init__.py"
+build-installer = "wix build installer/Package.wxs -arch x64 -out dist/DriveAutoCopy.msi"
+# build-installer not included in 'all'
+all = ["format", "lint", "test", "build-exe", "build-first-launch"]
