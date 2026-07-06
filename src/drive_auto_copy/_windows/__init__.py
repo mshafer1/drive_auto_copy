@@ -107,7 +107,9 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self._show_event.clear()
         self.show_window.emit()
         if not self._show_event.wait(timeout=5):
-            self._request_quit("Warning: Main window did not become visible within 5 seconds.")
+            why = "Warning: Main window did not become visible within 5 seconds."
+            self._request_quit(why)
+            raise RuntimeError(why)
 
     def _request_quit(self, why: str | None = None):
         print("Requesting application quit...")
@@ -308,10 +310,10 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             else:
                 self._emit_status(f"No files transferred from drive: {drive}")
 
-        for drive, (drive_transferred_count, moved_files) in transferred_by_drive.items():
+        for drive, (drive_transferred_count, transferred_files) in transferred_by_drive.items():
             action_word = "transferred"
             should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
-            self._highlight_files(moved_files)
+            self._highlight_files(transferred_files)
             if should_eject:
                 if self._eject_drive(drive):
                     self._emit_status(f"Drive ejected successfully: {drive}")

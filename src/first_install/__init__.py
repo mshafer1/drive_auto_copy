@@ -119,8 +119,8 @@ def template_and_configure_task(install_path: str):
             },
         )
     except subprocess.CalledProcessError as e:
-        print(f"Error registering task: {e.stderr}")
-        raise RuntimeError(f"Failed to create scheduled task: {e}") from e
+        details = (e.stderr or "").strip() or str(e)
+        raise RuntimeError(f"Failed to create scheduled task: {details}") from e
 
 
 def _run_as_admin():
