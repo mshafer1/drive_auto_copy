@@ -8,7 +8,7 @@ import drive_auto_copy._config as config_module
 
 def test___missing_config_file___returns_defaults_and_writes_template(tmp_path, monkeypatch):
     config_path = tmp_path / "settings.yaml"
-    monkeypatch.setenv("TDAC_CONFIG_PATH", str(config_path))
+    monkeypatch.setenv("DAC_CONFIG_PATH", str(config_path))
 
     config = config_module.load_config()
 
@@ -25,7 +25,7 @@ def test___missing_config_file___returns_defaults_and_writes_template(tmp_path, 
 def test___invalid_yaml___returns_defaults(tmp_path, monkeypatch):
     config_path = tmp_path / "settings.yaml"
     config_path.write_text("source_pattern: [", encoding="utf-8")
-    monkeypatch.setenv("TDAC_CONFIG_PATH", str(config_path))
+    monkeypatch.setenv("DAC_CONFIG_PATH", str(config_path))
 
     config = config_module.load_config()
 
@@ -37,7 +37,7 @@ def test___invalid_yaml___returns_defaults(tmp_path, monkeypatch):
 def test___non_mapping_yaml___returns_defaults(tmp_path, monkeypatch):
     config_path = tmp_path / "settings.yaml"
     config_path.write_text("- one\n- two\n", encoding="utf-8")
-    monkeypatch.setenv("TDAC_CONFIG_PATH", str(config_path))
+    monkeypatch.setenv("DAC_CONFIG_PATH", str(config_path))
 
     config = config_module.load_config()
 
@@ -59,7 +59,7 @@ def test___config_values_present___normalizes_and_coerces_values(tmp_path, monke
         "move_files: 'false'\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("TDAC_CONFIG_PATH", str(config_path))
+    monkeypatch.setenv("DAC_CONFIG_PATH", str(config_path))
     monkeypatch.setattr(config_module.datetime, "datetime", _FixedDateTime)
 
     config = config_module.load_config()
@@ -72,7 +72,7 @@ def test___config_values_present___normalizes_and_coerces_values(tmp_path, monke
 def test___invalid_move_files_value___falls_back_to_default_true(tmp_path, monkeypatch):
     config_path = tmp_path / "settings.yaml"
     config_path.write_text("move_files: not-a-bool\n", encoding="utf-8")
-    monkeypatch.setenv("TDAC_CONFIG_PATH", str(config_path))
+    monkeypatch.setenv("DAC_CONFIG_PATH", str(config_path))
 
     config = config_module.load_config()
 

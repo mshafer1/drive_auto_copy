@@ -22,7 +22,7 @@ class AppConfig:
 
 def _get_config_path() -> pathlib.Path:
     config_path = _config(
-        "TDAC_CONFIG_PATH",
+        "DAC_CONFIG_PATH",
         default="~/.config/drive_auto_copy/settings.yaml",
         cast=pathlib.Path,
     )
