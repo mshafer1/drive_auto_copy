@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import ctypes
+import logging
 import shutil
 import subprocess
 import threading
@@ -17,6 +19,8 @@ from drive_auto_copy._config import AppConfig
 
 HRESULT = getattr(wintypes, "HRESULT", ctypes.c_long)
 
+_logger = logging.getLogger(__name__)
+_logger.addHandler(logging.NullHandler())
 
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
     """Main application window for drive_auto_copy."""
@@ -319,7 +323,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 if self._eject_drive(drive):
                     self._emit_status(f"Drive ejected successfully: {drive}")
                 else:
-                    print(f"Failed to eject drive: {drive}")
+                    _logger.error("Failed to eject drive: %s", drive)
                     self._emit_status(f"Failed to eject drive: {drive}")
                     self._emit_status(f"Please manually eject the drive: {drive}")
             else:
