@@ -351,13 +351,19 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             f"$item = $shell.Namespace(17).ParseName('{drive_letter}:\\'); "
             "if ($item) { $item.InvokeVerb('Eject'); Start-Sleep -Seconds 2 } else { exit 1 }"
         )
+        utf16_bytes = command.encode("utf-16le")
+        base64_bytes = base64.b64encode(utf16_bytes)
+        base64_command = base64_bytes.decode("utf-8")
+
+        _logger.info("Executing eject command for drive %s:\n%s", drive_letter, command)
         result = subprocess.run(
             [
                 "conhost.exe",
                 "--headless",
                 "powershell.exe",
-                "-Command",
-                command,
+                "-NoProfile",
+                "-EncodedCommand",
+                base64_command,
             ],
             capture_output=True,
             text=True,
