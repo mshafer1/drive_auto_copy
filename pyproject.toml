@@ -1,6 +1,6 @@
 [project]
 name = "drive-auto-copy"
-version = "0.1.0"
+version = "0.1.1"
 description = "Auto copy files from removable media"
 authors = [
     {name = "Maker By Night",email = "2565361+mshafer1@users.noreply.github.com"}
