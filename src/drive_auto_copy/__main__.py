@@ -37,27 +37,36 @@ def _mutex_lock():
         print(f"An unexpected error occurred while acquiring the lock: {e}")
         sys.exit(1)
 
-def _setup_logging():
+def _setup_logging() -> None:
     """Set up logging for the application."""
     log_file = os.path.join(tempfile.gettempdir(), "drive_auto_copy.log")
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] - %(name)s - %(message)s")
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    
+
+    if any(
+        h.name in {"drive_auto_copy_file", "drive_auto_copy_console"}
+        for h in root_logger.handlers
+    ):
+        return
+
     file_handler = logging.handlers.RotatingFileHandler(
-        log_file, encoding='utf-8', maxBytes=10*1024*1024, backupCount=5
+        log_file,
+        encoding="utf-8",
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
     )
+    file_handler.name = "drive_auto_copy_file"
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
-    
     root_logger.addHandler(file_handler)
-    
+
     console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.name = "drive_auto_copy_console"
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
-    
 @click.command()
 def main():
     """Main entry point for the drive_auto_copy application."""
