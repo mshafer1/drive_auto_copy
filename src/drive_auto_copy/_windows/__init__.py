@@ -22,6 +22,7 @@ HRESULT = getattr(wintypes, "HRESULT", ctypes.c_long)
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
 
+
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
     """Main application window for drive_auto_copy."""
 

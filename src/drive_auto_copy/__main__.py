@@ -2,13 +2,11 @@
 
 import asyncio
 import contextlib
+import logging
+import logging.handlers
 import os
 import sys
 import tempfile
-import logging
-import logging.handlers
-if sys.platform != "win32":
-    raise SystemExit("drive-auto-copy is currently supported only on Windows.")
 
 import click
 import filelock
@@ -19,8 +17,13 @@ import qasync
 import drive_auto_copy._windows as windows
 from drive_auto_copy import _config
 
+if sys.platform != "win32":
+    raise SystemExit("drive-auto-copy is currently supported only on Windows.")
+
+
 _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
+
 
 @contextlib.contextmanager
 def _mutex_lock():
@@ -37,6 +40,7 @@ def _mutex_lock():
         print(f"An unexpected error occurred while acquiring the lock: {e}")
         sys.exit(1)
 
+
 def _setup_logging() -> None:
     """Set up logging for the application."""
     log_file = os.path.join(tempfile.gettempdir(), "drive_auto_copy.log")
@@ -46,8 +50,7 @@ def _setup_logging() -> None:
     root_logger.setLevel(logging.INFO)
 
     if any(
-        h.name in {"drive_auto_copy_file", "drive_auto_copy_console"}
-        for h in root_logger.handlers
+        h.name in {"drive_auto_copy_file", "drive_auto_copy_console"} for h in root_logger.handlers
     ):
         return
 
@@ -67,6 +70,8 @@ def _setup_logging() -> None:
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
+
+
 @click.command()
 def main():
     """Main entry point for the drive_auto_copy application."""
