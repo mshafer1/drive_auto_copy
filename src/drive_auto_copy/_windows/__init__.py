@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import ctypes
+import logging
 import shutil
 import subprocess
 import threading
@@ -16,6 +18,9 @@ import drive_auto_copy._drive_utils
 from drive_auto_copy._config import AppConfig
 
 HRESULT = getattr(wintypes, "HRESULT", ctypes.c_long)
+
+_logger = logging.getLogger(__name__)
+_logger.addHandler(logging.NullHandler())
 
 
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
@@ -319,7 +324,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 if self._eject_drive(drive):
                     self._emit_status(f"Drive ejected successfully: {drive}")
                 else:
-                    print(f"Failed to eject drive: {drive}")
+                    _logger.error("Failed to eject drive: %s", drive)
                     self._emit_status(f"Failed to eject drive: {drive}")
                     self._emit_status(f"Please manually eject the drive: {drive}")
             else:
@@ -347,13 +352,19 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             f"$item = $shell.Namespace(17).ParseName('{drive_letter}:\\'); "
             "if ($item) { $item.InvokeVerb('Eject'); Start-Sleep -Seconds 2 } else { exit 1 }"
         )
+        utf16_bytes = command.encode("utf-16le")
+        base64_bytes = base64.b64encode(utf16_bytes)
+        base64_command = base64_bytes.decode("utf-8")
+
+        _logger.info("Executing eject command for drive %s:\n%s", drive_letter, command)
         result = subprocess.run(
             [
                 "conhost.exe",
                 "--headless",
                 "powershell.exe",
-                "-Command",
-                command,
+                "-NoProfile",
+                "-EncodedCommand",
+                base64_command,
             ],
             capture_output=True,
             text=True,
