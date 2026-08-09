@@ -270,6 +270,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         for drive in drives:
             self._emit_status(f"Scanning drive: {drive}")
             matched_files = matched_files_by_drive.get(drive)
+            self._emit_status(f"Found {len(matched_files) if matched_files else 0} matching file(s) on {drive}")
             if not matched_files:
                 self._emit_status(
                     f"No files matched on {drive} for pattern {config.source_pattern}"
@@ -289,6 +290,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                         print(f"Skipped existing file: {destination_file.name}")
                         continue
 
+                    self._emit_status(f"Copying {source_file.name} to {destination_file}...")
                     shutil.copy2(source_file, destination_file)
                     moved_files.append(destination_file)
 
