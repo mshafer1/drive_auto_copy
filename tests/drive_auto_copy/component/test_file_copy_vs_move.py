@@ -131,8 +131,7 @@ def test___copy_operation_fails___does_not_remove_source(
     assert not (config.destination_path / "take4.WAV").exists()
     assert any("Error copying take4.WAV: copy failed" in message for message in statuses)
     assert any(
-        "Done. Moved 0 file(s), copied-but-not-removed 0 file(s), skipped 0 existing file(s)."
-        in message
+        "Some files could not be transferred. Please check the log for details." in message
         for message in statuses
     )
 
@@ -172,5 +171,6 @@ def test___mixed_outcomes___reports_expected_counts(
     assert (drive_root / "ok.WAV").exists()
     assert any("Error copying broken.WAV: disk full" in message for message in statuses)
     assert any(
-        "Done. Copied 1 file(s), skipped 1 existing file(s)." in message for message in statuses
+        "Some files could not be transferred. Please check the log for details." in message
+        for message in statuses
     )

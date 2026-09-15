@@ -23,6 +23,19 @@ _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
 
 
+class _NonClosableProgressDialog(PyQt6.QtWidgets.QProgressDialog):
+    """A QProgressDialog that cannot be dismissed by the user (Escape, Alt+F4, etc.)."""
+
+    def closeEvent(self, event):  # noqa: N802 - name from base class
+        event.ignore()
+
+    def keyPressEvent(self, event):  # noqa: N802 - name from base class
+        if event.key() == PyQt6.QtCore.Qt.Key.Key_Escape:
+            event.ignore()
+            return
+        super().keyPressEvent(event)
+
+
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
     """Main application window for drive_auto_copy."""
 
@@ -30,6 +43,8 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
     eject_prompt = PyQt6.QtCore.pyqtSignal(str, int, str)
     show_window = PyQt6.QtCore.pyqtSignal()
     quit_app = PyQt6.QtCore.pyqtSignal()
+    progress_show = PyQt6.QtCore.pyqtSignal(str)
+    progress_hide = PyQt6.QtCore.pyqtSignal()
 
     def __init__(self, loop: asyncio.AbstractEventLoop, config: AppConfig):
         """Initialize the main window and set up the UI components."""
@@ -46,10 +61,26 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self.status_box.setReadOnly(True)
         self.setCentralWidget(self.status_box)
 
+        self.progress_dialog = _NonClosableProgressDialog(self)
+        self.progress_dialog.setWindowTitle("Please Wait")
+        self.progress_dialog.setWindowModality(PyQt6.QtCore.Qt.WindowModality.ApplicationModal)
+        self.progress_dialog.setRange(0, 0)  # indeterminate/busy style
+        self.progress_dialog.setCancelButton(None)
+        self.progress_dialog.setMinimumDuration(0)
+        self.progress_dialog.setAutoClose(False)
+        self.progress_dialog.setAutoReset(False)
+        # remove the titlebar close button so it can't be dismissed by the user
+        self.progress_dialog.setWindowFlags(
+            self.progress_dialog.windowFlags() & ~PyQt6.QtCore.Qt.WindowType.WindowCloseButtonHint
+        )
+        self.progress_dialog.hide()
+
         self.status_message.connect(self._append_status)
         self.eject_prompt.connect(self._on_eject_prompt)
         self.show_window.connect(self._on_show_window)
         self.quit_app.connect(self._on_quit_app)
+        self.progress_show.connect(self._on_progress_show)
+        self.progress_hide.connect(self._on_progress_hide)
 
         self._prompt_event = threading.Event()
         self._prompt_answer = False
@@ -71,6 +102,21 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
     def _append_status(self, message: str):
         self.status_box.appendPlainText(message)
 
+    @PyQt6.QtCore.pyqtSlot(str)
+    def _on_progress_show(self, message: str):
+        self.progress_dialog.setLabelText(message)
+        self.progress_dialog.show()
+
+    @PyQt6.QtCore.pyqtSlot()
+    def _on_progress_hide(self):
+        self.progress_dialog.hide()
+
+    def _show_progress(self, message: str):
+        self.progress_show.emit(message)
+
+    def _hide_progress(self):
+        self.progress_hide.emit()
+
     @PyQt6.QtCore.pyqtSlot()
     def _on_show_window(self):
         if self._window_shown:
@@ -88,6 +134,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         print("Quitting application...")
         self._shutdown_requested.set()
         self._prompt_event.set()
+        self.progress_dialog.hide()
         app = PyQt6.QtWidgets.QApplication.instance()
         if app is not None:
             app.quit()
@@ -267,9 +314,14 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self._emit_status(f"Search pattern: {config.source_pattern}")
         self._emit_status(f"Transfer mode: {'move' if config.move_files else 'copy'}")
 
+        success = True
+
         for drive in drives:
             self._emit_status(f"Scanning drive: {drive}")
             matched_files = matched_files_by_drive.get(drive)
+            self._emit_status(
+                f"Found {len(matched_files) if matched_files else 0} matching file(s) on {drive}"
+            )
             if not matched_files:
                 self._emit_status(
                     f"No files matched on {drive} for pattern {config.source_pattern}"
@@ -281,6 +333,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             drive_transferred_count = 0
             moved_files = []
 
+            self._show_progress("Copying files...")
             for source_file in matched_files:
                 destination_file = drive_destination / source_file.name
                 try:
@@ -289,6 +342,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                         print(f"Skipped existing file: {destination_file.name}")
                         continue
 
+                    self._emit_status(f"Copying {source_file.name} to {destination_file}...")
                     shutil.copy2(source_file, destination_file)
                     moved_files.append(destination_file)
 
@@ -309,6 +363,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                         drive_transferred_count += 1
                         self._emit_status(f"Copied: {source_file.name}")
                 except OSError as error:
+                    success = False
                     self._emit_status(f"Error copying {source_file.name}: {error}")
 
             if drive_transferred_count > 0:
@@ -316,19 +371,13 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             else:
                 self._emit_status(f"No files transferred from drive: {drive}")
 
-        for drive, (drive_transferred_count, transferred_files) in transferred_by_drive.items():
-            action_word = "transferred"
-            should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
-            self._highlight_files(transferred_files)
-            if should_eject:
-                if self._eject_drive(drive):
-                    self._emit_status(f"Drive ejected successfully: {drive}")
-                else:
-                    _logger.error("Failed to eject drive: %s", drive)
-                    self._emit_status(f"Failed to eject drive: {drive}")
-                    self._emit_status(f"Please manually eject the drive: {drive}")
-            else:
-                self._emit_status(f"Drive not ejected: {drive}")
+        self._hide_progress()
+
+        if not success:
+            self._emit_status(
+                "Some files could not be transferred. Please check the log for details."
+            )
+            return
 
         if config.move_files:
             self._emit_status(
@@ -341,7 +390,28 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 f"Done. Copied {copied_count} file(s), skipped {skipped_count} existing file(s)."
             )
 
-        self._request_quit("Operation completed.")
+        for drive, (drive_transferred_count, transferred_files) in transferred_by_drive.items():
+            action_word = "transferred"
+            should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
+            self._highlight_files(transferred_files)
+            if should_eject:
+                self._show_progress(f"Ejecting drive {drive}...")
+                try:
+                    if self._eject_drive(drive):
+                        self._emit_status(f"Drive ejected successfully: {drive}")
+                    else:
+                        success = False
+                        _logger.error("Failed to eject drive: %s", drive)
+                        self._emit_status("\n\n")
+                        self._emit_status(f"Failed to eject drive: {drive}")
+                        self._emit_status(f"Please manually eject the drive: {drive}")
+                finally:
+                    self._hide_progress()
+            else:
+                self._emit_status(f"Drive not ejected: {drive}")
+
+        if success:
+            self._request_quit("Operation completed.")
 
     @staticmethod
     def _eject_drive(drive: str) -> bool:
@@ -362,6 +432,8 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 "conhost.exe",
                 "--headless",
                 "powershell.exe",
+                "-ExecutionPolicy",
+                "Bypass",
                 "-NoProfile",
                 "-EncodedCommand",
                 base64_command,
