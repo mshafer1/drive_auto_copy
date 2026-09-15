@@ -3,7 +3,7 @@ name = "drive-auto-copy"
 version = "0.1.2"
 description = "Auto copy files from removable media"
 authors = [
-    {name = "Maker By Night",email = "2565361+mshafer1@users.noreply.github.com"}
+    {name = "Maker By Night", email = "2565361+mshafer1@users.noreply.github.com"}
 ]
 license = "MIT"
 requires-python = ">=3.11,<4"
