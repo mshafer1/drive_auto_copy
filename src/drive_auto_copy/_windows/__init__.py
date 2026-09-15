@@ -23,6 +23,19 @@ _logger = logging.getLogger(__name__)
 _logger.addHandler(logging.NullHandler())
 
 
+class _NonClosableProgressDialog(PyQt6.QtWidgets.QProgressDialog):
+    """A QProgressDialog that cannot be dismissed by the user (Escape, Alt+F4, etc.)."""
+
+    def closeEvent(self, event):  # noqa: N802 - name from base class
+        event.ignore()
+
+    def keyPressEvent(self, event):  # noqa: N802 - name from base class
+        if event.key() == PyQt6.QtCore.Qt.Key.Key_Escape:
+            event.ignore()
+            return
+        super().keyPressEvent(event)
+
+
 class MainWindow(PyQt6.QtWidgets.QMainWindow):
     """Main application window for drive_auto_copy."""
 
@@ -48,7 +61,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self.status_box.setReadOnly(True)
         self.setCentralWidget(self.status_box)
 
-        self.progress_dialog = PyQt6.QtWidgets.QProgressDialog(self)
+        self.progress_dialog = _NonClosableProgressDialog(self)
         self.progress_dialog.setWindowTitle("Please Wait")
         self.progress_dialog.setWindowModality(PyQt6.QtCore.Qt.WindowModality.ApplicationModal)
         self.progress_dialog.setRange(0, 0)  # indeterminate/busy style
@@ -56,7 +69,11 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self.progress_dialog.setMinimumDuration(0)
         self.progress_dialog.setAutoClose(False)
         self.progress_dialog.setAutoReset(False)
-        self.progress_dialog.close()
+        # remove the titlebar close button so it can't be dismissed by the user
+        self.progress_dialog.setWindowFlags(
+            self.progress_dialog.windowFlags() & ~PyQt6.QtCore.Qt.WindowType.WindowCloseButtonHint
+        )
+        self.progress_dialog.hide()
 
         self.status_message.connect(self._append_status)
         self.eject_prompt.connect(self._on_eject_prompt)
@@ -297,6 +314,9 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self._emit_status(f"Search pattern: {config.source_pattern}")
         self._emit_status(f"Transfer mode: {'move' if config.move_files else 'copy'}")
 
+
+        success = True
+
         for drive in drives:
             self._emit_status(f"Scanning drive: {drive}")
             matched_files = matched_files_by_drive.get(drive)
@@ -344,6 +364,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                         drive_transferred_count += 1
                         self._emit_status(f"Copied: {source_file.name}")
                 except OSError as error:
+                    success = False
                     self._emit_status(f"Error copying {source_file.name}: {error}")
 
             if drive_transferred_count > 0:
@@ -353,23 +374,11 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
 
         self._hide_progress()
 
-        for drive, (drive_transferred_count, transferred_files) in transferred_by_drive.items():
-            action_word = "transferred"
-            should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
-            self._highlight_files(transferred_files)
-            if should_eject:
-                self._show_progress(f"Ejecting drive {drive}...")
-                try:
-                    if self._eject_drive(drive):
-                        self._emit_status(f"Drive ejected successfully: {drive}")
-                    else:
-                        _logger.error("Failed to eject drive: %s", drive)
-                        self._emit_status(f"Failed to eject drive: {drive}")
-                        self._emit_status(f"Please manually eject the drive: {drive}")
-                finally:
-                    self._hide_progress()
-            else:
-                self._emit_status(f"Drive not ejected: {drive}")
+        if not success:
+            self._emit_status(
+                "Some files could not be transferred. Please check the log for details."
+            )
+            return
 
         if config.move_files:
             self._emit_status(
@@ -382,7 +391,28 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 f"Done. Copied {copied_count} file(s), skipped {skipped_count} existing file(s)."
             )
 
-        self._request_quit("Operation completed.")
+        for drive, (drive_transferred_count, transferred_files) in transferred_by_drive.items():
+            action_word = "transferred"
+            should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
+            self._highlight_files(transferred_files)
+            if should_eject:
+                self._show_progress(f"Ejecting drive {drive}...")
+                try:
+                    if self._eject_drive(drive):
+                        self._emit_status(f"Drive ejected successfully: {drive}")
+                    else:
+                        success = False
+                        _logger.error("Failed to eject drive: %s", drive)
+                        self._emit_status("\n\n")
+                        self._emit_status(f"Failed to eject drive: {drive}")
+                        self._emit_status(f"Please manually eject the drive: {drive}")
+                finally:
+                    self._hide_progress()
+            else:
+                self._emit_status(f"Drive not ejected: {drive}")
+
+        if success:
+            self._request_quit("Operation completed.")
 
     @staticmethod
     def _eject_drive(drive: str) -> bool:
