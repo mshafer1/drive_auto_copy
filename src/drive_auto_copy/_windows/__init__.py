@@ -314,7 +314,6 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self._emit_status(f"Search pattern: {config.source_pattern}")
         self._emit_status(f"Transfer mode: {'move' if config.move_files else 'copy'}")
 
-
         success = True
 
         for drive in drives:
