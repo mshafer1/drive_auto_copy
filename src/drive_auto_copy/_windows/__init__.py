@@ -313,7 +313,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             drive_destination.mkdir(parents=True, exist_ok=True)
             drive_transferred_count = 0
             moved_files = []
-            
+
             self._show_progress("Copying files...")
             for source_file in matched_files:
                 destination_file = drive_destination / source_file.name
