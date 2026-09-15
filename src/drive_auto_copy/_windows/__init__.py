@@ -30,6 +30,8 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
     eject_prompt = PyQt6.QtCore.pyqtSignal(str, int, str)
     show_window = PyQt6.QtCore.pyqtSignal()
     quit_app = PyQt6.QtCore.pyqtSignal()
+    progress_show = PyQt6.QtCore.pyqtSignal(str)
+    progress_hide = PyQt6.QtCore.pyqtSignal()
 
     def __init__(self, loop: asyncio.AbstractEventLoop, config: AppConfig):
         """Initialize the main window and set up the UI components."""
@@ -46,10 +48,22 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         self.status_box.setReadOnly(True)
         self.setCentralWidget(self.status_box)
 
+        self.progress_dialog = PyQt6.QtWidgets.QProgressDialog(self)
+        self.progress_dialog.setWindowTitle("Please Wait")
+        self.progress_dialog.setWindowModality(PyQt6.QtCore.Qt.WindowModality.ApplicationModal)
+        self.progress_dialog.setRange(0, 0)  # indeterminate/busy style
+        self.progress_dialog.setCancelButton(None)
+        self.progress_dialog.setMinimumDuration(0)
+        self.progress_dialog.setAutoClose(False)
+        self.progress_dialog.setAutoReset(False)
+        self.progress_dialog.close()
+
         self.status_message.connect(self._append_status)
         self.eject_prompt.connect(self._on_eject_prompt)
         self.show_window.connect(self._on_show_window)
         self.quit_app.connect(self._on_quit_app)
+        self.progress_show.connect(self._on_progress_show)
+        self.progress_hide.connect(self._on_progress_hide)
 
         self._prompt_event = threading.Event()
         self._prompt_answer = False
@@ -71,6 +85,21 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
     def _append_status(self, message: str):
         self.status_box.appendPlainText(message)
 
+    @PyQt6.QtCore.pyqtSlot(str)
+    def _on_progress_show(self, message: str):
+        self.progress_dialog.setLabelText(message)
+        self.progress_dialog.show()
+
+    @PyQt6.QtCore.pyqtSlot()
+    def _on_progress_hide(self):
+        self.progress_dialog.hide()
+
+    def _show_progress(self, message: str):
+        self.progress_show.emit(message)
+
+    def _hide_progress(self):
+        self.progress_hide.emit()
+
     @PyQt6.QtCore.pyqtSlot()
     def _on_show_window(self):
         if self._window_shown:
@@ -88,6 +117,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         print("Quitting application...")
         self._shutdown_requested.set()
         self._prompt_event.set()
+        self.progress_dialog.hide()
         app = PyQt6.QtWidgets.QApplication.instance()
         if app is not None:
             app.quit()
@@ -270,7 +300,9 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         for drive in drives:
             self._emit_status(f"Scanning drive: {drive}")
             matched_files = matched_files_by_drive.get(drive)
-            self._emit_status(f"Found {len(matched_files) if matched_files else 0} matching file(s) on {drive}")
+            self._emit_status(
+                f"Found {len(matched_files) if matched_files else 0} matching file(s) on {drive}"
+            )
             if not matched_files:
                 self._emit_status(
                     f"No files matched on {drive} for pattern {config.source_pattern}"
@@ -281,7 +313,8 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             drive_destination.mkdir(parents=True, exist_ok=True)
             drive_transferred_count = 0
             moved_files = []
-
+            
+            self._show_progress("Copying files...")
             for source_file in matched_files:
                 destination_file = drive_destination / source_file.name
                 try:
@@ -318,17 +351,23 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             else:
                 self._emit_status(f"No files transferred from drive: {drive}")
 
+        self._hide_progress()
+
         for drive, (drive_transferred_count, transferred_files) in transferred_by_drive.items():
             action_word = "transferred"
             should_eject = self._ask_to_eject_drive(drive, drive_transferred_count, action_word)
             self._highlight_files(transferred_files)
             if should_eject:
-                if self._eject_drive(drive):
-                    self._emit_status(f"Drive ejected successfully: {drive}")
-                else:
-                    _logger.error("Failed to eject drive: %s", drive)
-                    self._emit_status(f"Failed to eject drive: {drive}")
-                    self._emit_status(f"Please manually eject the drive: {drive}")
+                self._show_progress(f"Ejecting drive {drive}...")
+                try:
+                    if self._eject_drive(drive):
+                        self._emit_status(f"Drive ejected successfully: {drive}")
+                    else:
+                        _logger.error("Failed to eject drive: %s", drive)
+                        self._emit_status(f"Failed to eject drive: {drive}")
+                        self._emit_status(f"Please manually eject the drive: {drive}")
+                finally:
+                    self._hide_progress()
             else:
                 self._emit_status(f"Drive not ejected: {drive}")
 
@@ -364,7 +403,8 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 "conhost.exe",
                 "--headless",
                 "powershell.exe",
-                "-Policy", "Bypass",
+                "-Policy",
+                "Bypass",
                 "-NoProfile",
                 "-EncodedCommand",
                 base64_command,
