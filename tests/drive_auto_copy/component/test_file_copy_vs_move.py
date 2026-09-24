@@ -86,9 +86,7 @@ def test___file_matched_by_multiple_configs___missing_after_move_warns_and_conti
         source_pattern="*.WAV",
         destination_path=tmp_path / "copied",
     )
-    window, statuses, quit_reasons = _build_window(
-        qapp, event_loop, [move_config, copy_config]
-    )
+    window, statuses, quit_reasons = _build_window(qapp, event_loop, [move_config, copy_config])
     fake__get_removable_drives.set_result([str(drive_root)])
 
     window._run_copy_workflow()

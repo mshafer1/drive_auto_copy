@@ -293,9 +293,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                     continue
 
                 if matched_files:
-                    matched_files_by_drive.setdefault(drive, []).append(
-                        (app_config, matched_files)
-                    )
+                    matched_files_by_drive.setdefault(drive, []).append((app_config, matched_files))
 
         print(f"Matched files by drive: {matched_files_by_drive}")
 
@@ -328,9 +326,7 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             for app_config, matched_files in drive_configs:
                 self._emit_status(f"Destination root: {app_config.destination_path}")
                 self._emit_status(f"Search pattern: {app_config.source_pattern}")
-                self._emit_status(
-                    f"Transfer mode: {'move' if app_config.move_files else 'copy'}"
-                )
+                self._emit_status(f"Transfer mode: {'move' if app_config.move_files else 'copy'}")
                 app_config.destination_path.mkdir(parents=True, exist_ok=True)
                 self._show_progress("Copying files...")
                 for source_file in matched_files:

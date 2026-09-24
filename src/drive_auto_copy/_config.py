@@ -43,7 +43,8 @@ def load_config() -> list[AppConfig]:
         _config_path.parent.mkdir(parents=True, exist_ok=True)
         with _config_path.open("w", encoding="utf-8") as fout:
             yaml.safe_dump(
-                [{
+                [
+                    {
                         **dataclasses.asdict(default),
                         "destination_path": str(default.destination_path),
                     }
@@ -69,9 +70,7 @@ def load_config() -> list[AppConfig]:
     configurations = []
     for values in loaded:
         if not isinstance(values, dict):
-            _logger.debug(
-                f"Invalid configuration in {_config_path}: {values!r}; using defaults."
-            )
+            _logger.debug(f"Invalid configuration in {_config_path}: {values!r}; using defaults.")
             configurations.append(default)
             continue
 
