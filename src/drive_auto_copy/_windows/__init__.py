@@ -46,11 +46,11 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
     progress_show = PyQt6.QtCore.pyqtSignal(str)
     progress_hide = PyQt6.QtCore.pyqtSignal()
 
-    def __init__(self, loop: asyncio.AbstractEventLoop, config: AppConfig):
+    def __init__(self, loop: asyncio.AbstractEventLoop, config: list[AppConfig] | AppConfig):
         """Initialize the main window and set up the UI components."""
         super().__init__()
         self.loop = loop
-        self.config = config
+        self.config = config if isinstance(config, list) else [config]
         self.worker_thread = threading.Thread(target=self._run_copy_workflow, daemon=True)
 
         self.setWindowTitle("Thumb Drive Auto Copy")
@@ -281,16 +281,21 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             self._request_quit("No removable drives found.")
             return
 
-        matched_files_by_drive = {}
+        matched_files_by_drive: dict[str, list[tuple[AppConfig, list[Path]]]] = {}
         for drive in drives:
             drive_root = Path(drive)
-            try:
-                matched_files = [p for p in drive_root.glob(config.source_pattern) if p.is_file()]
-            except (OSError, ValueError):
-                continue
+            for app_config in config:
+                try:
+                    matched_files = [
+                        p for p in drive_root.glob(app_config.source_pattern) if p.is_file()
+                    ]
+                except (OSError, ValueError):
+                    continue
 
-            if matched_files:
-                matched_files_by_drive[drive] = matched_files
+                if matched_files:
+                    matched_files_by_drive.setdefault(drive, []).append(
+                        (app_config, matched_files)
+                    )
 
         print(f"Matched files by drive: {matched_files_by_drive}")
 
@@ -307,64 +312,64 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
         skipped_count = 0
         copied_not_removed_count = 0
         transferred_by_drive: dict[str, tuple[int, list[Path]]] = {}
-        destination_root = config.destination_path
-        destination_root.mkdir(parents=True, exist_ok=True)
-
-        self._emit_status(f"Destination root: {destination_root}")
-        self._emit_status(f"Search pattern: {config.source_pattern}")
-        self._emit_status(f"Transfer mode: {'move' if config.move_files else 'copy'}")
-
         success = True
+        has_move_config = any(app_config.move_files for app_config in config)
 
         for drive in drives:
             self._emit_status(f"Scanning drive: {drive}")
-            matched_files = matched_files_by_drive.get(drive)
-            self._emit_status(
-                f"Found {len(matched_files) if matched_files else 0} matching file(s) on {drive}"
-            )
-            if not matched_files:
-                self._emit_status(
-                    f"No files matched on {drive} for pattern {config.source_pattern}"
-                )
+            drive_configs = matched_files_by_drive.get(drive, [])
+            if not drive_configs:
+                self._emit_status(f"No files matched on {drive}")
                 continue
 
-            drive_destination = destination_root
-            drive_destination.mkdir(parents=True, exist_ok=True)
             drive_transferred_count = 0
             moved_files = []
 
-            self._show_progress("Copying files...")
-            for source_file in matched_files:
-                destination_file = drive_destination / source_file.name
-                try:
-                    if destination_file.exists():
-                        skipped_count += 1
-                        print(f"Skipped existing file: {destination_file.name}")
+            for app_config, matched_files in drive_configs:
+                self._emit_status(f"Destination root: {app_config.destination_path}")
+                self._emit_status(f"Search pattern: {app_config.source_pattern}")
+                self._emit_status(
+                    f"Transfer mode: {'move' if app_config.move_files else 'copy'}"
+                )
+                app_config.destination_path.mkdir(parents=True, exist_ok=True)
+                self._show_progress("Copying files...")
+                for source_file in matched_files:
+                    if not source_file.is_file():
+                        self._emit_status(
+                            f"Warning: Source file no longer exists, skipping: {source_file}"
+                        )
                         continue
 
-                    self._emit_status(f"Copying {source_file.name} to {destination_file}...")
-                    shutil.copy2(source_file, destination_file)
-                    moved_files.append(destination_file)
+                    destination_file = app_config.destination_path / source_file.name
+                    try:
+                        if destination_file.exists():
+                            skipped_count += 1
+                            print(f"Skipped existing file: {destination_file.name}")
+                            continue
 
-                    if config.move_files:
-                        try:
-                            source_file.unlink()
-                            moved_count += 1
+                        self._emit_status(f"Copying {source_file.name} to {destination_file}...")
+                        shutil.copy2(source_file, destination_file)
+                        moved_files.append(destination_file)
+
+                        if app_config.move_files:
+                            try:
+                                source_file.unlink()
+                                moved_count += 1
+                                drive_transferred_count += 1
+                                self._emit_status(f"Moved: {source_file.name}")
+                            except OSError as error:
+                                copied_not_removed_count += 1
+                                drive_transferred_count += 1
+                                self._emit_status(
+                                    f"Copied but could not remove source {source_file.name}: {error}"
+                                )
+                        else:
+                            copied_count += 1
                             drive_transferred_count += 1
-                            self._emit_status(f"Moved: {source_file.name}")
-                        except OSError as error:
-                            copied_not_removed_count += 1
-                            drive_transferred_count += 1
-                            self._emit_status(
-                                f"Copied but could not remove source {source_file.name}: {error}"
-                            )
-                    else:
-                        copied_count += 1
-                        drive_transferred_count += 1
-                        self._emit_status(f"Copied: {source_file.name}")
-                except OSError as error:
-                    success = False
-                    self._emit_status(f"Error copying {source_file.name}: {error}")
+                            self._emit_status(f"Copied: {source_file.name}")
+                    except OSError as error:
+                        success = False
+                        self._emit_status(f"Error copying {source_file.name}: {error}")
 
             if drive_transferred_count > 0:
                 transferred_by_drive[drive] = (drive_transferred_count, moved_files)
@@ -379,13 +384,13 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
             )
             return
 
-        if config.move_files:
+        if has_move_config:
             self._emit_status(
                 "Done. "
                 f"Moved {moved_count} file(s), copied-but-not-removed {copied_not_removed_count} file(s), "
                 f"skipped {skipped_count} existing file(s)."
             )
-        else:
+        if copied_count > 0 and not has_move_config:
             self._emit_status(
                 f"Done. Copied {copied_count} file(s), skipped {skipped_count} existing file(s)."
             )
@@ -432,8 +437,6 @@ class MainWindow(PyQt6.QtWidgets.QMainWindow):
                 "conhost.exe",
                 "--headless",
                 "powershell.exe",
-                "-ExecutionPolicy",
-                "Bypass",
                 "-NoProfile",
                 "-EncodedCommand",
                 base64_command,
