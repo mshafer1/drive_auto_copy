@@ -21,11 +21,11 @@ Example:
 
 ```yaml
 - source_pattern: "AHQU/USBREC/*.WAV"
-	destination_path: "~/Music/DriveAutoCopy"
-	move_files: true
+  destination_path: "~/Music/DriveAutoCopy"
+  move_files: true
 - source_pattern: "*.MP3"
-	destination_path: "~/Music/DriveAutoCopy/MP3"
-	move_files: false
+  destination_path: "~/Music/DriveAutoCopy/MP3"
+  move_files: false
 ```
 
 Each list item defines one transfer rule:
