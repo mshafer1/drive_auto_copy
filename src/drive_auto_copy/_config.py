@@ -29,7 +29,7 @@ def _get_config_path() -> pathlib.Path:
     return pathlib.Path(config_path).expanduser()
 
 
-def load_config() -> AppConfig:
+def load_config() -> list[AppConfig]:
     """Load the application configuration from a YAML file."""
     default = AppConfig(
         source_pattern="AHQU/USBREC/*.WAV",
@@ -43,70 +43,80 @@ def load_config() -> AppConfig:
         _config_path.parent.mkdir(parents=True, exist_ok=True)
         with _config_path.open("w", encoding="utf-8") as fout:
             yaml.safe_dump(
-                {
-                    **dataclasses.asdict(default),
-                    "destination_path": str(default.destination_path),
-                },
+                [
+                    {
+                        **dataclasses.asdict(default),
+                        "destination_path": str(default.destination_path),
+                    }
+                ],
                 fout,
             )
-        return default
+        return [default]
 
     try:
         with _config_path.open("r", encoding="utf-8") as handle:
             loaded = yaml.safe_load(handle) or {}
     except OSError as error:
         _logger.debug(f"Failed to read config at {_config_path}: {error}; using defaults.")
-        return default
+        return [default]
     except yaml.YAMLError as error:
         _logger.debug(f"Invalid YAML in {_config_path}: {error}; using defaults.")
-        return default
+        return [default]
 
-    if not isinstance(loaded, dict):
-        _logger.debug(f"Config in {_config_path} must be a mapping; using defaults.")
-        return default
+    if not isinstance(loaded, list):
+        _logger.debug(f"Config in {_config_path} must be a list; using defaults.")
+        return [default]
 
-    source_pattern_value = loaded.get("source_pattern", default.source_pattern)
-    destination_value = loaded.get("destination_path", str(default.destination_path))
-    move_files_value = loaded.get("move_files", default.move_files)
+    configurations = []
+    for values in loaded:
+        if not isinstance(values, dict):
+            _logger.debug(f"Invalid configuration in {_config_path}: {values!r}; using defaults.")
+            configurations.append(default)
+            continue
 
-    if isinstance(source_pattern_value, str):
-        source_pattern = (
-            source_pattern_value.replace("**", "*").strip() or default.source_pattern
-        )  # recursive glob intentionally not supported
-    else:
-        _logger.debug(
-            f"Invalid source_pattern value in {_config_path}: {source_pattern_value!r}; using default."
-        )
-        source_pattern = default.source_pattern
+        source_pattern_value = values.get("source_pattern", default.source_pattern)
+        destination_value = values.get("destination_path", str(default.destination_path))
+        move_files_value = values.get("move_files", default.move_files)
 
-    working_path = pathlib.Path(
-        str(destination_value).replace(
-            "{TIMESTAMP}", datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        )
-    ).expanduser()
-    if not working_path.is_absolute():
-        _logger.warning(
-            "destination_path in config is not absolute; treating as relative to home directory."
-        )
-        working_path = pathlib.Path.home() / working_path
-        working_path.resolve()
-
-    destination_path = working_path
-
-    if isinstance(move_files_value, bool):
-        move_files = move_files_value
-    else:
-        try:
-            move_files = decouple.strtobool(str(move_files_value))
-        except ValueError:
-            _logger.debug(
-                f"Invalid move_files value in {_config_path}: {move_files_value!r}; using default."
+        if isinstance(source_pattern_value, str):
+            source_pattern = (
+                source_pattern_value.replace("**", "*").strip() or default.source_pattern
             )
-            move_files = default.move_files
+        else:
+            _logger.debug(
+                f"Invalid source_pattern value in {_config_path}: {source_pattern_value!r}; using default."
+            )
+            source_pattern = default.source_pattern
+
+        working_path = pathlib.Path(
+            str(destination_value).replace(
+                "{TIMESTAMP}", datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            )
+        ).expanduser()
+        if not working_path.is_absolute():
+            _logger.warning(
+                "destination_path in config is not absolute; treating as relative to home directory."
+            )
+            working_path = (pathlib.Path.home() / working_path).resolve()
+
+        if isinstance(move_files_value, bool):
+            move_files = move_files_value
+        else:
+            try:
+                move_files = decouple.strtobool(str(move_files_value))
+            except ValueError:
+                _logger.debug(
+                    f"Invalid move_files value in {_config_path}: {move_files_value!r}; using default."
+                )
+                move_files = default.move_files
+
+        configurations.append(
+            AppConfig(
+                source_pattern=source_pattern,
+                destination_path=working_path,
+                move_files=move_files,
+            )
+        )
 
     _logger.debug(f"Loaded config from {_config_path}")
-    return AppConfig(
-        source_pattern=source_pattern,
-        destination_path=destination_path,
-        move_files=move_files,
-    )
+    return configurations or [default]

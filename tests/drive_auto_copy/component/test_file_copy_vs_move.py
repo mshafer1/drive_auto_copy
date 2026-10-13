@@ -69,6 +69,36 @@ def test___move_mode_enabled___copies_and_removes_source(
     )
 
 
+def test___file_matched_by_multiple_configs___missing_after_move_warns_and_continues(
+    tmp_path, qapp, event_loop, app_config_factory, fake__get_removable_drives
+):
+    drive_root = tmp_path / "drive"
+    drive_root.mkdir()
+    source_file = drive_root / "take-multiple.WAV"
+    source_file.write_text("audio", encoding="utf-8")
+    move_config = app_config_factory(
+        move_files=True,
+        source_pattern="*.WAV",
+        destination_path=tmp_path / "moved",
+    )
+    copy_config = app_config_factory(
+        move_files=False,
+        source_pattern="*.WAV",
+        destination_path=tmp_path / "copied",
+    )
+    window, statuses, quit_reasons = _build_window(qapp, event_loop, [move_config, copy_config])
+    fake__get_removable_drives.set_result([str(drive_root)])
+
+    window._run_copy_workflow()
+
+    assert not source_file.exists()
+    assert (move_config.destination_path / source_file.name).exists()
+    assert not (copy_config.destination_path / source_file.name).exists()
+    assert any("Warning: Source file no longer exists, skipping" in message for message in statuses)
+    assert not any("Some files could not be transferred" in message for message in statuses)
+    assert quit_reasons == ["Operation completed."]
+
+
 def test___move_mode_unlink_fails___counts_as_copied_but_not_removed(
     tmp_path, monkeypatch, qapp, event_loop, app_config_factory, fake__get_removable_drives
 ):
@@ -131,8 +161,7 @@ def test___copy_operation_fails___does_not_remove_source(
     assert not (config.destination_path / "take4.WAV").exists()
     assert any("Error copying take4.WAV: copy failed" in message for message in statuses)
     assert any(
-        "Done. Moved 0 file(s), copied-but-not-removed 0 file(s), skipped 0 existing file(s)."
-        in message
+        "Some files could not be transferred. Please check the log for details." in message
         for message in statuses
     )
 
@@ -172,5 +201,6 @@ def test___mixed_outcomes___reports_expected_counts(
     assert (drive_root / "ok.WAV").exists()
     assert any("Error copying broken.WAV: disk full" in message for message in statuses)
     assert any(
-        "Done. Copied 1 file(s), skipped 1 existing file(s)." in message for message in statuses
+        "Some files could not be transferred. Please check the log for details." in message
+        for message in statuses
     )

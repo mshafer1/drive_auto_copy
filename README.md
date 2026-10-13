@@ -20,12 +20,15 @@ If present, configuration is loaded from:
 Example:
 
 ```yaml
-source_pattern: "AHQU/USBREC/*.WAV"
-destination_path: "~/Music/DriveAutoCopy"
-move_files: true
+- source_pattern: "AHQU/USBREC/*.WAV"
+  destination_path: "~/Music/DriveAutoCopy"
+  move_files: true
+- source_pattern: "*.MP3"
+  destination_path: "~/Music/DriveAutoCopy/MP3"
+  move_files: false
 ```
 
-Fields:
+Each list item defines one transfer rule:
 
 - `source_pattern`: Glob pattern resolved from the root of each removable drive.
 - `destination_path`: Local folder where matching files are copied.
