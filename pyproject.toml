@@ -8,9 +8,6 @@ authors = [
 license = "MIT"
 requires-python = ">=3.11,<4"
 dynamic = ["dependencies"]
-packages = [
-    {include = "drive_auto_copy", from = "src"}
-]
 scripts = {drive-auto-copy = "drive_auto_copy.__main__:main"}
 
 
@@ -18,6 +15,11 @@ scripts = {drive-auto-copy = "drive_auto_copy.__main__:main"}
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+
+[tool.poetry]
+packages = [
+    {include = "drive_auto_copy", from = "src"}
+]
 
 [tool.poetry.dependencies]
 click = "^8.4.2"
