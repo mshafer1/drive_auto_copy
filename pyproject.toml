@@ -24,7 +24,7 @@ click = "^8.4.2"
 pyqt6 = "^6.11.0"
 qasync = "^0.28.0"
 pyyaml = "^6.0.3"
-filelock = "^3.29.4"
+filelock = "^4.0.0"
 python-decouple = "^3.8"
 
 [tool.poetry.group.installer.dependencies]
