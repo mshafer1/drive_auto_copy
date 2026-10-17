@@ -462,14 +462,14 @@ files = [
 
 [[package]]
 name = "filelock"
-version = "3.29.4"
+version = "4.0.9"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "security"]
 files = [
-    {file = "filelock-3.29.4-py3-none-any.whl", hash = "sha256:dac1648087d5115554850d113e7dd8c83ab2d38e3435dde2d4f163847e57b767"},
-    {file = "filelock-3.29.4.tar.gz", hash = "sha256:10cdb3656fc44541cdf30652a93fb10ec6b05325620eb316bd26893e4201538a"},
+    {file = "filelock-4.0.9-py3-none-any.whl", hash = "sha256:9287fd61b99a806e5202be29a83034c0808a1b9830e820537c2f5773981f7eeb"},
+    {file = "filelock-4.0.9.tar.gz", hash = "sha256:635e7d67fa92654eed444e75e9ca18426d34e77ad9c469bf4373f75a932f7b22"},
 ]
 
 [[package]]
@@ -1723,4 +1723,4 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "6ed3ffb554bf8e8e6b7925ba84e435d5504792a35617610093749c0a71474961"
+content-hash = "f15e58cb3a51603a4f92910fbb61543a1aab5a59e010829abf7dd72cd0ac838f"
